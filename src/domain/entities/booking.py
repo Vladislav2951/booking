@@ -6,7 +6,7 @@ from uuid import UUID
 
 from uuid_extensions import uuid7  # type: ignore[import-untyped]
 
-from domain.errors import UnprocessableError
+from errors import UnprocessableError
 
 
 class BookingStatus(str, Enum):
