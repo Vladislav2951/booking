@@ -1,5 +1,9 @@
-from domain.entities import BookingStatus
+from dataclasses import dataclass
+from typing import Optional
+
+from domain.enums import BookingStatus
 
 
+@dataclass(slots=True)
 class BookingFilter:
-    statuses: set[BookingStatus]
+    statuses: Optional[set[BookingStatus]]

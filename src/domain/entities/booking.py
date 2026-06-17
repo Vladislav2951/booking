@@ -1,19 +1,12 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from enum import Enum
 from typing import Self
 from uuid import UUID
 
 from uuid_extensions import uuid7  # type: ignore[import-untyped]
 
+from domain.enums import BookingStatus
 from errors import UnprocessableError
-
-
-class BookingStatus(str, Enum):
-    PENDING = "pending"
-    CONFIRMED = "confirmed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
 
 
 @dataclass(slots=True)
@@ -27,7 +20,7 @@ class Booking:
     updated_at: datetime
 
     @classmethod
-    def create(cls, name: str, scheduled_at: datetime, service_type: datetime) -> Self:
+    def create(cls, name: str, scheduled_at: datetime, service_type: str) -> Self:
         now = datetime.now(timezone.utc)
         return cls(
             id=uuid7(),
@@ -55,4 +48,8 @@ class Booking:
             )
 
         self.status = BookingStatus.CANCELLED
+        self.updated_at = datetime.now(timezone.utc)
+
+    def set_failed(self):
+        self.status = BookingStatus.FAILED
         self.updated_at = datetime.now(timezone.utc)

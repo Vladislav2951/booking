@@ -1,4 +1,4 @@
-from .booking import Booking, BookingStatus
+from .booking import Booking
 
 
-__all__ = ["Booking", "BookingStatus"]
+__all__ = ["Booking"]
