@@ -35,7 +35,7 @@ celery_app = Celery(
 async def _simulate_external_api_call(booking_id: "UUID"):
     import random
 
-    await asyncio.sleep(1)
+    await asyncio.sleep(3)
 
     if random.random() < 0.15:
         raise ConnectionError("Mock external service timeout")

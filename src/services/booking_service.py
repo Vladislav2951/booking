@@ -8,7 +8,7 @@ from infrastructure.celery.booking_producer import send_booking_to_processing
 from infrastructure.postgres.db import managed_transaction_async
 from infrastructure.postgres.repositories import BookingRepo
 from libs.logger.custom_logger import get_logger
-from workers.booking_tasks import process_booking_task
+from tasks.booking_tasks import process_booking_task
 
 
 if TYPE_CHECKING:
