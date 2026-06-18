@@ -2,6 +2,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 
 from celery import Celery, Task
+from celery.signals import task_failure, task_success
 
 from config import settings
 from domain.enums import BookingStatus
@@ -71,7 +72,7 @@ async def process_booking_task(
             await repo.save(booking)
 
     except ConnectionError as e:
-        logger.debug("Retries: %d", self.request.retries)
+        logger.debug("Retries for booking %s: %d", booking_id, self.request.retries)
 
         # Если это последняя попытка
         if self.request.retries >= (self.max_retries or 0) - 1:
@@ -93,3 +94,36 @@ async def process_booking_task(
         self.retry(max_retries=2, countdown=1)  # (celery-aio-pool)
 
     return {"status": BookingStatus.CONFIRMED.value}
+
+
+@task_success.connect(sender=process_booking_task)
+def on_booking_task_success(sender=None, result=None, **kwargs):
+    args = getattr(getattr(sender, "request", None), "args", ()) or ()
+
+    booking_id = "unknown"
+    if isinstance(args, (list, tuple)) and len(args) > 0:
+        booking_id = str(args[0])
+
+    notification = {
+        "type": "booking.completed",
+        "booking_id": booking_id,
+        "status": result.get("status") if isinstance(result, dict) else "unknown",
+    }
+    logger.info(f"[MOCK] Уведомление отправлено: {notification}")
+
+
+@task_failure.connect(sender=process_booking_task)
+def on_booking_task_failure(sender=None, exception=None, **kwargs):
+    args = getattr(getattr(sender, "request", None), "args", ()) or ()
+
+    booking_id = "unknown"
+    if isinstance(args, (list, tuple)) and len(args) > 0:
+        booking_id = str(args[0])
+
+    notification = {
+        "type": "booking.failed",
+        "booking_id": booking_id,
+        "error_type": type(exception).__name__,
+        "message": str(exception),
+    }
+    logger.warning(f"[MOCK] Уведомление об ошибке: {notification}")
