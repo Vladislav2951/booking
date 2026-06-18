@@ -1,7 +1,7 @@
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from celery import Celery
+from celery import Celery, Task
 
 from config import settings
 from domain.enums import BookingStatus
@@ -13,6 +13,8 @@ from libs.logger.custom_logger import get_logger
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+    from celery import Task
 
 logger = get_logger("booking_worker")
 
@@ -43,50 +45,51 @@ async def _simulate_external_api_call(booking_id: "UUID"):
 
 @celery_app.task(
     bind=True,
-    autoretry_for=(ConnectionError,),
-    retry_backoff=True,
-    max_retries=2,
+    # autoretry_for=(ConnectionError,), # * celery-aio-pool не поддерживает autoretry
     soft_time_limit=10,
+    retry_backoff=True,
 )
-def process_booking_task(self, booking_id: "UUID") -> dict[str, str]:
+async def process_booking_task(
+    self: "Task[Any, Any]", booking_id: "UUID"
+) -> dict[str, str]:
     logger.info("Processing task for booking %s", booking_id)
 
-    async def _run_async() -> dict[str, str]:
-        try:
+    try:
+        async with managed_transaction_async(async_session_factory) as t:
+            repo = BookingRepo(t)
+            booking = await repo.get_one(booking_id)
+
+            if not booking:
+                raise NotFoundError(f"Booking {booking_id} not found")
+
+            if booking.status != BookingStatus.PENDING:
+                return {"status": booking.status.value}
+
+            await _simulate_external_api_call(booking_id)
+
+            booking.confirm()
+            await repo.save(booking)
+
+    except ConnectionError as e:
+        logger.debug("Retries: %d", self.request.retries)
+
+        # Если это последняя попытка
+        if self.request.retries >= (self.max_retries or 0) - 1:
             async with managed_transaction_async(async_session_factory) as t:
                 repo = BookingRepo(t)
+
                 booking = await repo.get_one(booking_id)
+                if booking and booking.status == BookingStatus.PENDING:
+                    booking.set_failed()
+                    await repo.save(booking)
 
-                if not booking:
-                    raise NotFoundError(f"Booking {booking_id} not found")
+            logger.warning(
+                "Booking %s failed after exhausting retries (%d)",
+                booking_id,
+                self.request.retries,
+            )
+            raise e
 
-                if booking.status != BookingStatus.PENDING:
-                    return {"status": booking.status.value}
+        self.retry(max_retries=2, countdown=1)  # (celery-aio-pool)
 
-                await _simulate_external_api_call(booking_id)
-
-                booking.confirm()
-                await repo.save(booking)
-                return {"status": BookingStatus.CONFIRMED.value}
-
-        except ConnectionError as e:
-            # Если это последняя попытка
-            if self.request.retries >= self.max_retries - 1:
-                async with managed_transaction_async(async_session_factory) as t:
-                    repo = BookingRepo(t)
-
-                    booking = await repo.get_one(booking_id)
-                    if booking and booking.status == BookingStatus.PENDING:
-                        booking.set_failed()
-                        await repo.save(booking)
-
-                logger.warning("Booking %s failed after exhausting retries", booking_id)
-
-            raise e  # retry
-
-    try:
-        return asyncio.run(_run_async())
-    except ConnectionError as e:
-        # Исключение после исчерпания всех попыток
-        logger.exception("Booking %s failed after retries: %s", booking_id, e)
-        return {"status": BookingStatus.FAILED.value}
+    return {"status": BookingStatus.CONFIRMED.value}
