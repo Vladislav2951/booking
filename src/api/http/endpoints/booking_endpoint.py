@@ -1,8 +1,10 @@
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import UUID7
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.http.common_exceptions import internal_server_error, not_found
 from api.http.response_models import DataManyResponse, DataResponse, ErrorResponse, Meta
@@ -31,14 +33,24 @@ router = APIRouter(
 )
 
 
+def key_func(request: Request):
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=key_func)
+
+
 @router.post(
     "/",
     summary="Create booking",
     response_model=DataResponse[BookingResponseSchema],
     responses={status.HTTP_201_CREATED: {"description": "Success"}},
 )
+@limiter.limit("2/10seconds")
 async def create(
-    inp: BookingCreateSchema, booking_srv: "BookingService" = Depends(booking_srv)
+    request: Request,  # for limiter
+    inp: BookingCreateSchema,
+    booking_srv: "BookingService" = Depends(booking_srv),
 ):
     try:
         dto = BookingCreateInput(**inp.model_dump())
