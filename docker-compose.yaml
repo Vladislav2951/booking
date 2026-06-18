@@ -41,7 +41,7 @@ services:
 
             DATABASE_URI: "${DATABASE_URI:-postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/booking_db}"
             REDIS_URI: "${REDIS_URI:-redis://redis:6379/0}"
-        command: sh -c "celery -A workers.booking_tasks worker --loglevel=info"
+        command: sh -c "celery -A tasks.booking_tasks worker --loglevel=info"
         depends_on:
             - api
 
