@@ -42,10 +42,11 @@ class BookingService:
                 logger.info(
                     "Processing task queued. Booking ID (Task ID): %s", booking.id
                 )
-            except Exception as exc:
+            except Exception as e:
                 logger.warning(
-                    "Failed to queue processing for booking %s: %s", booking.id, str(exc)
+                    "Failed to queue processing for booking %s: %s", booking.id, str(e)
                 )
+                raise e
 
         return booking
 
@@ -79,10 +80,7 @@ class BookingService:
             if not booking:
                 return  # Already cancelled (deleted)
 
-            if booking.status != BookingStatus.PENDING:
-                raise UnprocessableError("Only pending bookings can be cancelled")
-
-            booking.cancel()
+            booking.cancel()  # raises UnprocessableError
 
             # Отменённые записи удаляются (по ТЗ)
             await booking_repo.delete(booking_id)

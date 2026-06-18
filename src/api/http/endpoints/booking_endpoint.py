@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import UUID7
 
@@ -14,7 +14,7 @@ from api.http.schemas import (
 from dependencies import booking_srv
 from domain.dto import BookingCreateInput
 from domain.filters import BookingFilter
-from errors import NotFoundError
+from errors import NotFoundError, UnprocessableError
 from libs.logger.custom_logger import get_logger
 
 
@@ -77,7 +77,7 @@ async def get_one(
         )
 
     except NotFoundError:
-        raise not_found("Booking not found")
+        raise not_found("Booking not found or cancelled")
     except Exception as e:
         logger.exception("Error during getting booking: %s", str(e))
         raise internal_server_error()
@@ -112,15 +112,24 @@ async def get_all(
         raise internal_server_error()
 
 
+# * Заметка: Было бы правильнее использовать POST /booking/{id}/cancel (оставил как в ТЗ)
 @router.delete(
     "/{booking_id}",
     summary="Cancel booking",
-    responses={status.HTTP_204_NO_CONTENT: {"description": "Success"}},
+    responses={
+        status.HTTP_204_NO_CONTENT: {"description": "Success"},
+        status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "Unprocessable operation"},
+    },
 )
 async def cancel(booking_id: UUID7, booking_srv: "BookingService" = Depends(booking_srv)):
     try:
         await booking_srv.cancel(booking_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    except UnprocessableError as e:
+        return HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)
+        )
 
     except Exception as e:
         logger.exception("Error during cancelling booking: %s", str(e))
