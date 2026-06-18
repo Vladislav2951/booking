@@ -20,8 +20,8 @@ logger = get_logger("booking_worker")
 
 celery_app = Celery(
     "booking_worker",
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL,
+    broker=settings.REDIS_URI,
+    backend=settings.REDIS_URI,
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",

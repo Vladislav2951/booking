@@ -19,8 +19,8 @@ def _get_version_from_pyproject():
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/booking_db"
-    REDIS_URL: str = "redis://localhost:6379/0"
+    DATABASE_URI: str = "postgresql+asyncpg://postgres:password@localhost:5432/booking_db"
+    REDIS_URI: str = "redis://localhost:6379/0"
     RATE_LIMIT_STORAGE_URI: str = "memory://"
     APP_ENV: Literal["dev", "prod", "test"] = "dev"
     VERSION: str = _get_version_from_pyproject()
