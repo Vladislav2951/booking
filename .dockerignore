@@ -1,0 +1,13 @@
+.venv
+node_modules/
+.git/
+*.log
+*.pyc
+__pycache__/
+.env
+.env.example
+.gitignore
+.mypy_cache/
+.vscode
+Dockerfile
+docker-compose.yaml

@@ -1,0 +1,48 @@
+services:
+    postgres:
+        image: postgres:16-alpine
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: booking_db
+        ports:
+            - "5432:5432"
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+
+    redis:
+        image: redis:7-alpine
+        command: redis-server --appendonly yes
+        ports:
+            - "6379:6379"
+
+    api:
+        build: .
+        env_file: .env
+        environment:
+            DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/booking_db
+            REDIS_URL: redis://redis:6379/0
+            RATE_LIMIT_STORAGE_URI: redis://redis:6379/1
+            PYTHONPATH: /app/src
+        ports:
+            - "8000:8000"
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_started
+
+    worker:
+        build: .
+        env_file: .env
+        environment:
+            PYTHONPATH: /app/src
+
+            DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/booking_db
+            REDIS_URL: redis://redis:6379/0
+        command: sh -c "celery -A workers.booking_tasks worker --loglevel=info"
+        # depends_on:
+        #     - api
+
+volumes:
+    pgdata:
