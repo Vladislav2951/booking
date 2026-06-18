@@ -2,8 +2,7 @@ from typing import TYPE_CHECKING, Optional
 import uuid
 
 from domain.entities import Booking
-from domain.enums import BookingStatus
-from errors import NotFoundError, UnprocessableError
+from errors import NotFoundError
 from infrastructure.celery.booking_producer import send_booking_to_processing
 from infrastructure.postgres.db import managed_transaction_async
 from infrastructure.postgres.repositories import BookingRepo

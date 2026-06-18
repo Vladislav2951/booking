@@ -139,7 +139,7 @@ async def cancel(booking_id: UUID7, booking_srv: "BookingService" = Depends(book
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     except UnprocessableError as e:
-        return HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e)
         )
 
