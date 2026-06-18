@@ -5,7 +5,7 @@ from domain.entities import Booking
 from domain.enums import BookingStatus
 from errors import NotFoundError, UnprocessableError
 from infrastructure.celery.booking_producer import send_booking_to_processing
-from infrastructure.postgres.db import managed_transaction
+from infrastructure.postgres.db import managed_transaction_async
 from infrastructure.postgres.repositories import BookingRepo
 from libs.logger.custom_logger import get_logger
 from workers.booking_tasks import process_booking_task
@@ -33,7 +33,7 @@ class BookingService:
             service_type=booking_inp.service_type,
         )
 
-        async with managed_transaction(self._db_transaction_factory) as t:
+        async with managed_transaction_async(self._db_transaction_factory) as t:
             booking_repo = BookingRepo(t)
             _ = await booking_repo.create(booking)
 
@@ -50,7 +50,7 @@ class BookingService:
         return booking
 
     async def get_one(self, booking_id: uuid.UUID) -> Booking:
-        async with managed_transaction(self._db_transaction_factory) as t:
+        async with managed_transaction_async(self._db_transaction_factory) as t:
             booking_repo = BookingRepo(t)
 
             booking = await booking_repo.get_one(booking_id)
@@ -62,7 +62,7 @@ class BookingService:
     async def get_all(
         self, filter: "BookingFilter", limit: int = 20, offset: Optional[int] = None
     ) -> tuple[list[Booking], int]:
-        async with managed_transaction(self._db_transaction_factory) as t:
+        async with managed_transaction_async(self._db_transaction_factory) as t:
             booking_repo = BookingRepo(t)
 
             if count := await booking_repo.count():
@@ -72,7 +72,7 @@ class BookingService:
                 return [], 0
 
     async def cancel(self, booking_id: uuid.UUID):
-        async with managed_transaction(self._db_transaction_factory) as t:
+        async with managed_transaction_async(self._db_transaction_factory) as t:
             booking_repo = BookingRepo(t)
 
             booking = await booking_repo.get_one(booking_id)

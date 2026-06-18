@@ -1,5 +1,4 @@
 import asyncio
-from datetime import timezone
 from typing import TYPE_CHECKING
 
 from celery import Celery
@@ -7,7 +6,7 @@ from celery import Celery
 from config import settings
 from domain.enums import BookingStatus
 from errors import NotFoundError
-from infrastructure.postgres.db import async_session_factory, managed_transaction
+from infrastructure.postgres.db import async_session_factory, managed_transaction_async
 from infrastructure.postgres.repositories import BookingRepo
 from libs.logger.custom_logger import get_logger
 
@@ -32,10 +31,6 @@ celery_app = Celery(
     broker_connection_retry_on_startup=True,
 )
 
-# celery_app.conf.update(
-
-# )
-
 
 async def _simulate_external_api_call(booking_id: "UUID"):
     import random
@@ -58,7 +53,7 @@ def process_booking_task(self, booking_id: "UUID") -> dict[str, str]:
 
     async def _run_async() -> dict[str, str]:
         try:
-            async with managed_transaction(async_session_factory) as t:
+            async with managed_transaction_async(async_session_factory) as t:
                 repo = BookingRepo(t)
                 booking = await repo.get_one(booking_id)
 
@@ -77,7 +72,7 @@ def process_booking_task(self, booking_id: "UUID") -> dict[str, str]:
         except ConnectionError as e:
             # Если это последняя попытка
             if self.request.retries >= self.max_retries - 1:
-                async with managed_transaction(async_session_factory) as t:
+                async with managed_transaction_async(async_session_factory) as t:
                     repo = BookingRepo(t)
 
                     booking = await repo.get_one(booking_id)

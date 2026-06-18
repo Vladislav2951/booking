@@ -16,7 +16,7 @@ class BookingCreateSchema(BaseModel):
 
 
 class BookingGetAllSchema(Pagination):
-    statuses: Optional[set[BookingStatus]]
+    statuses: Optional[set[BookingStatus]] = None
 
 
 class BookingResponseSchema(BaseModel):
@@ -27,10 +27,3 @@ class BookingResponseSchema(BaseModel):
     status: BookingStatus
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class PaginatedBookings(BaseModel):
-    items: list[BookingResponseSchema]
-    total: int
-    page: int
-    size: int
