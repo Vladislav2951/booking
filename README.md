@@ -1,4 +1,4 @@
-# Async Booking Service
+# Booking Service
 
 Демонстрационный сервис для управления бронированиями с асинхронной фоновой обработкой задач (Celery), реализованный на базе FastAPI и SQLAlchemy 2.0 (Async).
 
