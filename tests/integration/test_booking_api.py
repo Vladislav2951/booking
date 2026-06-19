@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 from domain.enums import BookingStatus
 
@@ -51,9 +52,14 @@ class TestBookingsAPI:
         )
 
     async def test_cancel_booking_success(self, client, pending_booking):
-        resp = await client.delete(f"/bookings/{pending_booking.id}")
+        with patch(
+            "tasks.booking_tasks.process_booking_task.app.control.revoke"
+        ) as revoke_mock:
+            revoke_mock.return_value = None
 
-        assert resp.status_code == 204, f"Expected 204, got {resp.text}"
+            resp = await client.delete(f"/bookings/{pending_booking.id}")
+
+            assert resp.status_code == 204, f"Expected 204, got {resp.text}"
 
     async def test_cancel_booking_unprocessable(self, client, pending_booking, repo_mock):
         pending_booking.status = BookingStatus.FAILED

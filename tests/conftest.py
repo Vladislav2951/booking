@@ -55,9 +55,7 @@ def repo_mock(pending_booking):
 
 
 @pytest.fixture()
-async def client(repo_mock):
-    """Создаёт тестовый клиент FastAPI с полностью замоканной БД."""
-
+def mock_factory():
     class FakeTransaction:
         async def __aenter__(self) -> "FakeTransaction":
             return self
@@ -74,9 +72,17 @@ async def client(repo_mock):
         async def close(self):
             pass
 
-    mock_factory = MagicMock(return_value=FakeTransaction())
+    return MagicMock(return_value=FakeTransaction())
 
-    service = BookingService(db_transaction_factory=mock_factory)
+
+@pytest.fixture()
+def service(mock_factory):
+    return BookingService(db_transaction_factory=mock_factory)
+
+
+@pytest.fixture()
+async def client(repo_mock, service):
+    """тестовый клиент FastAPI"""
 
     with patch("services.booking_service.BookingRepo", return_value=repo_mock):
         app.dependency_overrides[booking_srv] = lambda: service
