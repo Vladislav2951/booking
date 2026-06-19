@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from pydantic import UUID7
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -44,6 +44,7 @@ limiter = Limiter(key_func=key_func)
     "/",
     summary="Create booking",
     response_model=DataResponse[BookingResponseSchema],
+    status_code=status.HTTP_201_CREATED,
     responses={status.HTTP_201_CREATED: {"description": "Success"}},
 )
 @limiter.limit("2/10seconds")
@@ -55,14 +56,7 @@ async def create(
     try:
         dto = BookingCreateInput(**inp.model_dump())
         booking = await booking_srv.create(dto)
-        return JSONResponse(
-            {
-                "data": BookingResponseSchema.model_validate(
-                    booking, from_attributes=True
-                ).model_dump(mode="json", by_alias=True)
-            },
-            status_code=status.HTTP_201_CREATED,
-        )
+        return {"data": jsonable_encoder(booking)}
 
     except Exception as e:
         logger.exception("Error during creating booking: %s", str(e))
@@ -80,13 +74,7 @@ async def get_one(
 ):
     try:
         booking = await booking_srv.get_one(booking_id)
-        return JSONResponse(
-            {
-                "data": BookingResponseSchema.model_validate(
-                    booking, from_attributes=True
-                ).model_dump(mode="json", by_alias=True)
-            }
-        )
+        return {"data": jsonable_encoder(booking)}
 
     except NotFoundError:
         raise not_found("Booking not found or cancelled")
@@ -109,12 +97,7 @@ async def get_all(
         booking_filter = BookingFilter(statuses=inp.statuses)
         bookings, total = await booking_srv.get_all(booking_filter, inp.limit, inp.offset)
 
-        data = [
-            BookingResponseSchema.model_validate(b, from_attributes=True).model_dump(
-                mode="json", by_alias=True
-            )
-            for b in bookings
-        ]
+        data = [jsonable_encoder(b) for b in bookings]
         meta = Meta(page=inp.page, size=inp.size, total=total)
 
         return {"data": data, "meta": meta}

@@ -1,8 +1,7 @@
 from datetime import datetime
 from typing import Optional
-import uuid
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import UUID7, BaseModel, ConfigDict, Field
 
 from domain.enums import BookingStatus
 
@@ -20,7 +19,7 @@ class BookingGetAllSchema(Pagination):
 
 
 class BookingResponseSchema(BaseModel):
-    id: uuid.UUID
+    id: UUID7
     name: str
     scheduled_at: datetime = Field(serialization_alias="datetime")
     service_type: str
