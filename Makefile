@@ -8,7 +8,6 @@ dev: ## Run FastAPI server locally
 
 test: ## Run tests without Docker (uses mocks)
 	uv run pytest .
-# 	@DATABASE_URL=sqlite+aiosqlite:///./test.db REDIS_URL=redis://localhost:6379/2 uv run pytest -v
 
 lint: ## Lint and format code with Black + isort
 	uv run black .
