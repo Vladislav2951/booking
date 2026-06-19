@@ -59,7 +59,7 @@ async def create(
             {
                 "data": BookingResponseSchema.model_validate(
                     booking, from_attributes=True
-                ).model_dump(mode="json")
+                ).model_dump(mode="json", by_alias=True)
             },
             status_code=status.HTTP_201_CREATED,
         )
@@ -84,7 +84,7 @@ async def get_one(
             {
                 "data": BookingResponseSchema.model_validate(
                     booking, from_attributes=True
-                ).model_dump(mode="json")
+                ).model_dump(mode="json", by_alias=True)
             }
         )
 
@@ -111,7 +111,7 @@ async def get_all(
 
         data = [
             BookingResponseSchema.model_validate(b, from_attributes=True).model_dump(
-                mode="json"
+                mode="json", by_alias=True
             )
             for b in bookings
         ]
